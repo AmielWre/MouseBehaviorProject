@@ -1,0 +1,17 @@
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore MATLAB autosave and backup files
+*.asv
+*.m~
+*.mat
+
+# Ignore build and temporary data
+results/
+data/
+resources/
+
+# Ignore project-specific temporary files
+*.prj
+
