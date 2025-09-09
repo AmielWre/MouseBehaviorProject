@@ -106,19 +106,19 @@ function plotStackedBars(seqTimeInSec, boundaries, strangerData, emptyData, exp)
     % Axis and labels
     xticks(xPositions);
     xticklabels(string(boundaries));
-    xlabel('Boundary Allowance');
+    xlabel('Boundary Allowance (cm)');
     ylabel('Total Duration (frames)');
 
     % Legend
     legendEntries = cell(1, numTrials * 2);
     for k = 1:numTrials
-        legendEntries{k} = sprintf('Stranger - Trail %d', k);
-        legendEntries{numTrials + k} = sprintf('Empty - Trail %d', k);
+        legendEntries{k} = sprintf('Stranger - Trial %d', k);
+        legendEntries{numTrials + k} = sprintf('Empty - Trial %d', k);
     end
     legend([b1, b2], legendEntries, 'Location', 'northwest');
 
     box on;
-    drawnow;
+    % drawnow;
     SaveFolders.saveBoundaryPlot(exp, fig, round(seqTimeInSec, 1))
 end
 
@@ -165,7 +165,7 @@ function plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp)
     colormap(jet);
     colorbar;
     xlabel('Boundary Allowance (cm)');
-    ylabel('Sequence Time (s)');
+    ylabel('Sequence Time (second)');
     title('Preference Score Heatmap');
     set(gca, 'YDir', 'normal'); % so seqTimes increase upward
 
