@@ -1,4 +1,7 @@
 function psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries)
+    
+    % Data for saving files
+    bAndSeqPath = fullfile('results', '3chamber', 'boundary&sequence');
 
     % Store PS across seqTimes and boundaries
     psMatrix = zeros(numel(seqTimes), numel(boundaries));
@@ -103,19 +106,19 @@ function plotStackedBars(seqTimeInSec, boundaries, strangerData, emptyData, exp)
     % Axis and labels
     xticks(xPositions);
     xticklabels(string(boundaries));
-    xlabel('Boundary Allowance (cm)');
+    xlabel('Boundary Allowance');
     ylabel('Total Duration (frames)');
 
     % Legend
     legendEntries = cell(1, numTrials * 2);
     for k = 1:numTrials
-        legendEntries{k} = sprintf('Stranger - Trial %d', k);
-        legendEntries{numTrials + k} = sprintf('Empty - Trial %d', k);
+        legendEntries{k} = sprintf('Stranger - Trail %d', k);
+        legendEntries{numTrials + k} = sprintf('Empty - Trail %d', k);
     end
     legend([b1, b2], legendEntries, 'Location', 'northwest');
 
     box on;
-    % drawnow;
+    drawnow;
     SaveFolders.saveBoundaryPlot(exp, fig, round(seqTimeInSec, 1))
 end
 
@@ -162,7 +165,7 @@ function plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp)
     colormap(jet);
     colorbar;
     xlabel('Boundary Allowance (cm)');
-    ylabel('Sequence Time (second)');
+    ylabel('Sequence Time (s)');
     title('Preference Score Heatmap');
     set(gca, 'YDir', 'normal'); % so seqTimes increase upward
 
@@ -170,13 +173,39 @@ function plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp)
 end
 
 function saveBollMats(analysis, exp)
+    % saveBollMats - Save boolean matrices (stranger_out, empty_out)
+    % Files will be saved under:
+    %   data/processed/bool_matrices/seq<seq>/b<boundary>/
+    %   with filenames:
+    %     bool_<group>_<color>_<date>_stranger.mat
+    %     bool_<group>_<color>_<date>_empty.mat
+
+    formats = "mat";
+
     stMat = analysis.getMatrix("stranger_out");
     emMat = analysis.getMatrix("empty_out");
 
-    stMat = squeeze(stMat(2, :, :));
-    emMat = squeeze(emMat(2, :, :));
+    stMat = squeeze(stMat(2, :, :)); % So it will contain only the mat with continuity (according to seqTimeInSec)
+    emMat = squeeze(emMat(2, :, :)); % -- " --
+    
+    % Build folder path
+    seqFolder = sprintf("seq%.1f", analysis.seqTimeInSec);
+    bFolder   = sprintf("b%.1f", analysis.boundaryAllowance);
+    baseDir   = fullfile("data","processed","bool_matrices",seqFolder,bFolder);
 
-    SaveFolders.saveBollMats(stMat, emMat, exp, analysis.seqTimeInSec, analysis.boundaryAllowance);
+    
+    % Extract metadata from experiment
+    group = exp.getGroup();
+    color = exp.getColor();
+    date  = exp.getDate();
+
+    id = sprintf("%s_%s_%s", group, color, date);
+    fpathSt = sprintf("bool_%s_stranger", id);
+    fpathEm = sprintf("bool_%s_empty", id);
+    
+    SaveFolders.saveFile(stMat, [], baseDir, fpathSt, formats, false);
+    SaveFolders.saveFile(emMat, [], baseDir, fpathEm, formats, false);
+
 end
 
 % *1

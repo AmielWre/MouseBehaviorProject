@@ -65,53 +65,7 @@ classdef SaveFolders
             fprintf('Figure saved: %s\n', fpath);
         end
 
-        function saveBollMats(stMat, emMat, exp, seqTimeInSec, boundaryAllowance)
-            % saveBollMats - Save boolean matrices (stranger_out, empty_out)
-            %
-            % Inputs:
-            %   stMat             - Boolean matrix for stranger ROI (trials x frames)
-            %   emMat             - Boolean matrix for empty ROI (trials x frames)
-            %   exp               - ExperimentBehave object
-            %   seqTimeInSec      - Sequence requirement (numeric scalar)
-            %   boundaryAllowance - Boundary allowance (numeric scalar)
-            %
-            % Files will be saved under:
-            %   data/processed/bool_matrices/seq<seq>/b<boundary>/
-            %   with filenames:
-            %     <group>_<color>_<date>_stranger.mat
-            %     <group>_<color>_<date>_empty.mat
-    
-            % Extract metadata from experiment
-            group = exp.getGroup();
-            color = exp.getColor();
-            date  = exp.getDate();
-    
-            % Build folder path
-            seqFolder = sprintf("seq%.1f", seqTimeInSec);
-            bFolder   = sprintf("b%.1f", boundaryAllowance);
-            baseDir   = fullfile("data","processed","bool_matrices",seqFolder,bFolder);
-    
-            % Ensure folder exists
-            if ~exist(baseDir,"dir")
-                mkdir(baseDir);
-            end
-    
-            % Stranger file
-            fnameSt = sprintf("bool_%s_%s_%s_stranger.mat", group, color, date);
-            fpathSt = fullfile(baseDir, fnameSt);
-            stranger = stMat; %#ok<NASGU> keep clean var name in .mat
-            save(fpathSt, "stranger");
-    
-            % Empty file
-            fnameEm = sprintf("bool_%s_%s_%s_empty.mat", group, color, date);
-            fpathEm = fullfile(baseDir, fnameEm);
-            empty = emMat; %#ok<NASGU>
-            save(fpathEm, "empty");
-    
-            % fprintf("Saved: %s\n", fpathSt);
-            % fprintf("Saved: %s\n", fpathEm);
-        end
-
+        
         function saveMatResults(stStatistics, emStatistics, ps, exp, seq, boundary)
             % Extract identifiers
             group  = exp.group;
@@ -170,39 +124,82 @@ classdef SaveFolders
             end
         end
 
-        function saveMouseSummary(fig, group, color, filename)
-            % Save figure in results\3chamber\boundary&sequence\<group>\<color>
-            folderPath = fullfile("results", "3chamber", "boundary&sequence", group, color);
-            if ~exist(folderPath, 'dir')
-                mkdir(folderPath);
+
+
+        function saveFile(data, figHandle, baseDir, fileName, formats, printFlag)
+            % saveFile - Flexible file saver
+            %
+            % Inputs:
+            %   data      - struct of variables to save (only used if 'mat' in formats)
+            %   figHandle - handle to figure (only used if 'png' or 'fig' in formats)
+            %   baseDir   - directory where files will be saved
+            %   fileName  - file name without extension
+            %   formats   - cell array of formats to save, e.g. {'png','fig','mat'}
+            %   printFlag - if true - print path to what saved
+            % Examples:
+            %   saveFile([], gcf, "results", "test_plot", {'png','fig'});
+            %   saveFile(myStruct, [], "results", "trial_data", {'mat'});
+            
+            if ~exist(baseDir, 'dir')
+                mkdir(baseDir);
             end
-            saveas(fig, fullfile(folderPath, filename + ".png"));
-            savefig(fig, fullfile(folderPath, filename + ".fig"));
+            
+            for i = 1:numel(formats)
+                fmt = lower(formats{i});
+                fpath = fullfile(baseDir, fileName + "." + fmt);
+                
+                switch fmt
+                    case 'png'
+                        if isempty(figHandle), error('Figure handle required for PNG'); end
+                        saveas(figHandle, fpath);
+                        
+                    case 'fig'
+                        if isempty(figHandle), error('Figure handle required for FIG'); end
+                        savefig(figHandle, fpath);
+                        
+                    case 'mat'
+                        if isempty(data)
+                            error('Data required for MAT');
+                        end
+                        
+                        varName = matlab.lang.makeValidName(fileName); % safe variable name
+                        
+                        if isstruct(data)
+                            fields = fieldnames(data);
+                            if numel(fields) == 1
+                                % Single-field struct: rename to fileName
+                                tmp.(varName) = data.(fields{1});
+                                save(fpath, '-struct', 'tmp');
+                            else
+                                % Multi-field struct: save all fields
+                                save(fpath, '-struct', 'data');
+                            end
+                        else
+                            % Plain matrix/vector/array
+                            tmp.(varName) = data;
+                            save(fpath, '-struct', 'tmp');
+                        end
+
+                        
+                    case 'csv'
+                        if isempty(data), error('Data cell/struct required for CSV'); end
+                        if iscell(data)
+                            writecell(data, fpath);
+                        elseif istable(data)
+                            writetable(data, fpath);
+                        else
+                            error('CSV requires cell or table input');
+                        end
+                        
+                    otherwise
+                        warning('Unknown format: %s (skipped)', fmt);
+                end
+                if printFlag
+                    fprintf('Saved: %s\n', fpath);
+                end
+            end
         end
 
-        function saveSummaryPs(fig, filename)
-            % Save figure in results\3chamber\boundary&sequence\summary_ps
-            folderPath = fullfile("results", "3chamber", "boundary&sequence", "summary_ps", "all_days");
-            if ~exist(folderPath, 'dir')
-                mkdir(folderPath);
-            end
-            saveas(fig, fullfile(folderPath, filename + ".png"));
-            savefig(fig, fullfile(folderPath, filename + ".fig"));
-        end
-
-        function saveSummaryPsAverage(fig, group, color)
-            % Save in summary_ps/per_mouse/average with name group_color
-            outDir = fullfile('results', '3chamber', 'boundary&sequence', ...
-                              'summary_ps', 'per_mouse', 'average');
-            if ~exist(outDir, 'dir')
-                mkdir(outDir);
-            end
-            fileName = sprintf('%s_%s.png', group, color);
-            saveas(fig, fullfile(outDir, fileName));
-        end
-
-
-        
 
 
 

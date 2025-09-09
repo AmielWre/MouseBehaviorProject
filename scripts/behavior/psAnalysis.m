@@ -22,6 +22,7 @@ seqTimes = 0 : 0.5 : 5;       % Sequence times in seconds (minimum stay in ROI)
 threshold = 0.2;              % Tolerance around ±1 to treat as outlier
 modePerExp = "normalize";       % Aggregation mode: 'none', 'normalize', or 'zscore'
 modePerMouse = "normalize";
+baseDir = fullfile("results", "3chamber", "boundary&sequence");
 
 % -------- Collect matrices --------
 path = "results\\3chamber\\boundary&sequence\\allPsMatrices.mat";
@@ -101,15 +102,22 @@ for m = 1:numel(mouseIDs)
         group, color, 1-threshold), 'FontSize', 10, 'Interpreter', 'none');
     set(findall(gcf,'Type','axes'),'TitleFontSizeMultiplier',0.9); % shrink subplot titles
     
-    % Save in group/color folder (all sessions + average subplot)
-    SaveFolders.saveMouseSummary(fig, group, color, 'all_days');
-    % Save in summary_ps folder (all sessions + average subplot)
-    SaveFolders.saveSummaryPs(fig, sprintf('%s_all_days', strcat(group, '_', color)));
+    % ---- Save subplots (all sessions + average subplot, png and fig) ----
+    % save in baseDir\group\color as all_days
+    SaveFolders.saveFile([], fig, fullfile(baseDir, group, color), 'all_days', ...
+        {'png', 'fig'}, false);
+    % save in baseDir\summary_ps\all_days as <group>_<color>_all_days
+    SaveFolders.saveFile([], fig, fullfile(baseDir, "summary_ps", "all_days"),...
+        sprintf('%s_%s_all_days', group, color), {'png', 'fig'}, false);
 
-    % -------- Save separate average-only figure --------
+    % -------- Save separate average-only figure (png and fig) --------
     figAvg = createAverageFigure(boundaries, seqTimes, avgMatrix, nSessions, group, color, threshold);
-    SaveFolders.saveSummaryPsAverage(figAvg, group, color);
-    SaveFolders.saveMouseSummary(figAvg, group, color, 'average');
+    % save in baseDir\group\color as average
+    SaveFolders.saveFile([], figAvg, fullfile(baseDir, group, color), 'average', ...
+        {'png', 'fig'}, false);
+    % save in baseDir\summary_ps\per_mouse as average
+    SaveFolders.saveFile([], figAvg, fullfile(baseDir, "summary_ps",...
+        "per_mouse", "average"), sprintf('%s_%s', group, color), {'png', 'fig'}, false);
 
     % -------- Collect matrices for overall analysis --------
     avgNormMatrix = preprocessMatrix(rawMatrix, threshold, modePerMouse);
@@ -120,9 +128,9 @@ end
 allNormMatrix = aggregateMatrices(allMatrices);
 figAll = createAverageFigure(boundaries, seqTimes, allNormMatrix, numel(allMatrices), 'All', 'Experiments', threshold);
 
-% Save overall average
-SaveFolders.saveSummaryPsAverage(figAll, 'all', 'experiments');
-SaveFolders.saveMouseSummary(figAll, 'all', 'experiments', 'average');
+% Save overall average in baseDir\all_groups as average
+SaveFolders.saveFile([], figAll, fullfile(baseDir, 'all_groups'), 'average', ...
+        {'png', 'fig'}, false);
 
 % -------- Helper functions --------
 function mouseID = extractMouseID(fieldName)

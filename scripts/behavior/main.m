@@ -21,7 +21,7 @@ allPsPath = fullfile("results", "3chamber", "boundary&sequence", "allPsMatrices_
 if isfile(allPsPath)
     load(allPsPath, 'allPsMatrices');
 else
-    allPsMatrices = struct();  % or struct, depending on your implementation
+    allPsMatrices = struct();
 end
 
 % Define paths
@@ -82,10 +82,10 @@ for g = 1:numel(groupFolders)
         % If we have anlized this experiment already - skeep that one. if
         % you want to analyze again (with new logic\variables\some reason)
         % - COMMENTS THIS IF STATMENT (OR DELETE allPsMatrices_checkpoint)
-        if isfield(allPsMatrices, validKey)
-            fprintf('Skipping %s (already processed)\n', validKey);
-            continue; % Skip this experiment
-        end
+        % % if isfield(allPsMatrices, validKey)
+        % %     fprintf('Skipping %s (already processed)\n', validKey);
+        % %     continue; % Skip this experiment
+        % % end
                 
         psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries);
         
@@ -98,7 +98,7 @@ for g = 1:numel(groupFolders)
         if ~exist(outDir,"dir")
             mkdir(outDir);
         end
-        save(fullfile(outDir, "allPsMatrices_checkpoint.mat"), "allPsMatrices");
+        % % save(fullfile(outDir, "allPsMatrices_checkpoint.mat"), "allPsMatrices");
 
     end
 end
