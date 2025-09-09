@@ -1,7 +1,11 @@
 function psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries)
     
     % Data for saving files
-    bAndSeqPath = fullfile('results', '3chamber', 'boundary&sequence');
+    group = exp.getGroup();
+    color = exp.getColor();
+    date  = exp.getDate();
+    baseDir = fullfile('results', '3chamber', 'boundary&sequence', group, color);
+    id = sprintf("%s_%s_%s", group, color, date);
 
     % Store PS across seqTimes and boundaries
     psMatrix = zeros(numel(seqTimes), numel(boundaries));
@@ -43,21 +47,37 @@ function psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries)
             psScores(bIdx) = psScore;
 
             SaveFolders.saveCsvResults(stStatistics, emStatistics, psScore, exp, seqTimeInSec, boundaryAllowance);
-            SaveFolders.saveMatResults(stStatistics, emStatistics, psScore, exp, seqTimeInSec, boundaryAllowance);
+            
+            % Save the statistics data (stStatistics, emStatistics, psScore):
+            % results\3chamber\boundary&sequence\matfiles\<group>_<color>_<date>\seq<seqTimeInSec>_b<boundaryAllowance>.mat
+            data.stStatistics = stStatistics;
+            data.emStatistics = emStatistics;
+            data.psScore = psScore;
+            basePath = fullfile("results", "3chamber", "boundary&sequence", "matfiles", id);
+            fileName = sprintf("seq%.1f_b%.1f", seqTimeInSec, boundaryAllowance);
+            SaveFolders.saveFile(data, [], basePath, fileName, {'mat'}, false);
         end
     
         % Save PS row into matrix
         psMatrix(sIdx, :) = psScores;
     
         % Plot results for this sequence time
-        plotStackedBars(seqTimeInSec, boundaries, strangerData, emptyData, exp);
+        fig = plotStackedBars(seqTimeInSec, boundaries, strangerData, emptyData);
+
+        % Save plot in pathToFolder\<group>\<color>\<date>_<sequence>second_sequence.png
+        fileName = sprintf('%s_%.1fsecond_sequence', date, seqTimeInSec);
+        SaveFolders.saveFile([], fig, baseDir, fileName, {'png'}, true);
     end
 
-    % Show heatmap of PS scores
-    plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp);
+    % Plot heatmap of PS scores
+    fig = plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp);
+
+    % Save plot in pathToFolder\<group>\<color>\<date>_<sequence>second_sequence.png
+    fileName = sprintf('%s_preference_score.png', date);
+    SaveFolders.saveFile([], fig, baseDir, fileName, {'png'}, true);
 end
 
-function plotStackedBars(seqTimeInSec, boundaries, strangerData, emptyData, exp)
+function fig = plotStackedBars(seqTimeInSec, boundaries, strangerData, emptyData)
 % plotStackedBars - Creates a stacked bar chart comparing Stranger and Empty ROI durations.
 %
 % Syntax:
@@ -68,7 +88,6 @@ function plotStackedBars(seqTimeInSec, boundaries, strangerData, emptyData, exp)
 %   boundaries    - Array of boundary allowance values (numeric vector)
 %   strangerData  - Matrix of Stranger ROI durations (numTrials x numBoundaries)
 %   emptyData     - Matrix of Empty ROI durations (numTrials x numBoundaries)
-%   exp           - ExperimentBehave object
 %
 % Output:
 %   A figure displaying stacked bar plots, with:
@@ -119,7 +138,6 @@ function plotStackedBars(seqTimeInSec, boundaries, strangerData, emptyData, exp)
 
     box on;
     % drawnow;
-    SaveFolders.saveBoundaryPlot(exp, fig, round(seqTimeInSec, 1))
 end
 
 function ps = computePreferenceScore(strangerTime, emptyTime)
@@ -145,7 +163,7 @@ function ps = computePreferenceScore(strangerTime, emptyTime)
     end
 end
 
-function plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp)
+function fig = plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp)
 % plotPreferenceHeatmap - Show heatmap of preference scores across parameters
 %
 % Syntax:
@@ -169,7 +187,6 @@ function plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp)
     title('Preference Score Heatmap');
     set(gca, 'YDir', 'normal'); % so seqTimes increase upward
 
-    SaveFolders.savePsHeatMap(exp, fig);
 end
 
 function saveBollMats(analysis, exp)
