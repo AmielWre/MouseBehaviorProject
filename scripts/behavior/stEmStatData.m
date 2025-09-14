@@ -19,5 +19,3 @@ function [stStatistics, emStatistics] = stEmStatData(data, exp)
     end
 
 end
-
-

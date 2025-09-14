@@ -73,7 +73,7 @@ function psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries)
     fig = plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp);
 
     % Save plot in pathToFolder\<group>\<color>\<date>_<sequence>second_sequence.png
-    fileName = sprintf('%s_preference_score.png', date);
+    fileName = sprintf('%s_preference_score.png', date); 
     SaveFolders.saveFile([], fig, baseDir, fileName, {'png'}, true);
 end
 

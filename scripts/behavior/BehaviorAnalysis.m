@@ -214,4 +214,3 @@ function vOut = handleNaNs(vIn, f, minNanSeq, nFrames)
         vOut(f:f+nextValidRel-1) = lins(2:end);
     end
 end
-
