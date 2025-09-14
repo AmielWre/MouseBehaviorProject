@@ -1,22 +1,31 @@
 classdef ExperimentBehave
-    % ExperimentBehave
-    % This class represents behavioral experiment metadata and data.
+    % ExperimentBehave - Represents and processes behavioral experiment data.
+    %
+    % Description:
+    %   This class is designed to encapsulate all the metadata and raw data
+    %   for a single behavioral experiment. It handles the parsing of
+    %   experiment details (like group, date, and color) directly from the
+    %   filename and provides a convenient structure for storing and
+    %   accessing the core data matrices.
     %
     % Properties:
-    %   path         - String: path to the XY_behave .mat file
-    %   XY_behave    - 2x3xN matrix: coordinates of the mouse
-    %   stim_trials  - Vector: which trials had stimulation [1,2,3]
-    %   type         - String: experiment type (e.g., '3chamber')
-    %   group        - Integer: mouse group number
-    %   color        - String: color of the mouse group (e.g., 'blue')
-    %   date         - String: experiment date (e.g., '20231203' means 03.12.2023)
-    %   details      - String: trial layout description (e.g., 'em_R_st_L')
-    %   cagePos      - Struct: contains rectangles and experiment metadata
+    %   path         - String: Full path to the XY_behave .mat file.
+    %   XY_behave    - 2x3xN matrix: Mouse coordinates (x, y) over time.
+    %   stim_trials  - Vector: Trial numbers with stimulation applied.
+    %   expType      - String: Experiment type (e.g., '3chamber').
+    %   group        - String: Mouse group number (e.g., '10th').
+    %   color        - String: Mouse group color (e.g., 'blue').
+    %   date         - String: Experiment date in 'yyyymmdd' format.
+    %   details      - String: Trial layout description (e.g., 'em_R_st_L').
+    %   cagePos      - Struct: Contains rectangles and other experiment metadata.
     %
     % Constructor:
-    %   obj = ExperimentBehave(path, cagePos)        % from path
-    %   obj = ExperimentBehave(...all fields...)     % directly from values
-
+    %   There are two valid constructors for this class:
+    %   1. obj = ExperimentBehave(path, cagePos)        % From path
+    %   2. obj = ExperimentBehave(...all fields...)     % Directly from values
+    %
+    % See also:
+    %   main_analysis
     properties
         path string
         XY_behave double
@@ -28,34 +37,60 @@ classdef ExperimentBehave
         details string
         cagePos struct
     end
-
     methods
         function obj = ExperimentBehave(varargin)
-            % Constructor
+            % ExperimentBehave - Creates an ExperimentBehave object.
+            %
+            % Syntax:
+            %   obj = ExperimentBehave(path, cagePos)
+            %   obj = ExperimentBehave(path, XY_behave, stim_trials, expType, group, color, date, details, cagePos)
+            %
+            % Description:
+            %   The constructor supports two distinct calling syntaxes to
+            %   create an instance of the class. The first syntax automatically
+            %   parses experiment metadata from a filename, while the second
+            %   allows direct initialization from pre-existing values.
+            %
+            % Inputs:
+            %   path        - string: Full path to the .mat file. Expected
+            %                   filename format: 'XY_behave_<group>th_<color>_<yyyymmdd>_...<expType>.mat'
+            %   cagePos     - struct: Cage position data.
+            %
+            %   -OR-
+            %   
+            %   path        - string: Path to the experiment file.
+            %   XY_behave   - double: 2x3xN matrix of XY coordinates.
+            %   stim_trials - double: Vector of trial numbers with stimulation.
+            %   expType     - string: Experiment type.
+            %   group       - string: Mouse group.
+            %   color       - string: Mouse color.
+            %   date        - string: Experiment date.
+            %   details     - string: Trial details.
+            %   cagePos     - struct: Cage position data.
+            %
+            % Output:
+            %   obj - An instance of the ExperimentBehave class.
+            %
+            % Example (Syntax 1):
+            %   cageData = load('chamber_rois_positions/10th_yellow_20240321.mat');
+            %   exp = ExperimentBehave('XY_behave_10th_yellow_20240321_em_R_st_L_3chamber.mat', cageData);
+            %   From this name, the constructor will extract:
+                %       group     '10th'
+                %       color     'yellow'
+                %       date      '20240321'
+                %       details   'em_R_st_L'
+                %       expType   '3chamber'
+            %
+            % Example (Syntax 2):
+            %   % Assumes data variables are already in the workspace
+            %   exp = ExperimentBehave('myFile.mat', XY_behave, stim_trials, '3chamber', '12th', 'green', '20240401', 'em_L_st_R', cageData);
+            
             if nargin == 2
                 % Constructor from path and cagePos
-                % Notes on `path` input (for automatic parsing):
-                %   The function expects `path` to be a string containing 
-                %   the filename of the XY_behave .mat file.
-                %   The filename must follow the format:
-                %
-                %       'XY_behave_<group>th_<color>_<yyyymmdd>_<details>_<expType>.mat'
-                %
-                %   Example:
-                %       'XY_behave_8th_blue_20231203_st_R_em_L_3chamber.mat'
-                %
-                %   From this name, the constructor will extract:
-                %       group     → '8th'
-                %       color     → 'blue'
-                %       date      → '20231203'
-                %       details   → 'st_R_em_L'
-                %       expType   → '3chamber'
-                %
-                %   The file must also contain variables named `XY_behave` and `stim_trials`.
                 path = string(varargin{1});
                 cagePos = varargin{2};
                 
-
+                % Split path to get just the filename
                 tokensPath = split(path, '\');
                 obj.path = tokensPath{end};
                 obj.cagePos = cagePos;
@@ -63,22 +98,22 @@ classdef ExperimentBehave
                 % Parse filename (remove prefix and suffix)
                 tokens = split(obj.path, '_');
                 if startsWith(tokens{1}, 'XY')
-                    tokens = tokens(3:end); % Skip 'XY' and 'behave'
+                    % Skip 'XY' and 'behave' parts of the filename
+                    tokens = tokens(3:end);
                 end
-
-                % obj.group = str2double(extract(tokens{1}, digitsPattern));
+                
                 obj.group = tokens{1};
                 obj.color = tokens{2};
-                % rawDate = tokens{3};
                 obj.date = tokens{3};
+                % Join the details section, which may contain underscores
                 obj.details = strjoin(tokens(4:7), '');
+                % Remove the .mat extension from the last token
                 obj.expType = erase(tokens{8}, '.mat');
-
-                % Load XY_behave and stim_trials
+                
+                % Load XY_behave and stim_trials from the file specified by obj.path
                 data = load(obj.path);
                 obj.XY_behave = data.XY_behave;
                 obj.stim_trials = data.stim_trials;
-
             elseif nargin == 9
                 % Constructor from full fields
                 obj.path = varargin{1};
@@ -91,27 +126,65 @@ classdef ExperimentBehave
                 obj.details = varargin{8};
                 obj.cagePos = varargin{9};
             else
+                % Throw an error for an invalid number of arguments
                 error('Invalid number of arguments to constructor.');
             end
         end
 
-
         % -------- Getters --------
-        function val = getPath(obj), val = obj.path; end
-        function val = getXYBehave(obj), val = obj.XY_behave; end
-        function val = getStimTrials(obj), val = obj.stim_trials; end
-        function val = getExpType(obj), val = obj.expType; end
-        function val = getGroup(obj), val = obj.group; end
-        function val = getColor(obj), val = obj.color; end
-        function val = getDate(obj), val = obj.date; end
-        function val = getDetails(obj), val = obj.details; end
-        function val = getCagePos(obj), val = obj.cagePos; end
+        
+        function val = getPath(obj)
+            val = obj.path;
+        end
+        
+        function val = getXYBehave(obj)
+            val = obj.XY_behave;
+        end
+        
+        function val = getStimTrials(obj)
+            val = obj.stim_trials;
+        end
+        
+        function val = getExpType(obj)
+            val = obj.expType;
+        end
+        
+        function val = getGroup(obj)
+            val = obj.group;
+        end
+        
+        function val = getColor(obj)
+            val = obj.color;
+        end
+        
+        function val = getDate(obj)
+            val = obj.date;
+        end
+        
+        function val = getDetails(obj)
+            val = obj.details;
+        end
+        
+        function val = getCagePos(obj)
+            val = obj.cagePos;
+        end
     end
 end
-
 % ---- Local helper function ----
 function formatted = convertDate(rawDate)
-    % Converts '20231203' → '03.12.2023'
+    % convertDate - Converts a date string from 'yyyymmdd' to 'dd.mm.yyyy'.
+    %
+    % Syntax:
+    %   formatted = convertDate(rawDate)
+    %
+    % Inputs:
+    %   rawDate - string: The raw date string in 'yyyymmdd' format.
+    %
+    % Output:
+    %   formatted - string: The formatted date string in 'dd.mm.yyyy' format.
+    %
+    % Example:
+    %   formattedDate = convertDate('20231203');
     y = rawDate(1:4);
     m = rawDate(5:6);
     d = rawDate(7:8);

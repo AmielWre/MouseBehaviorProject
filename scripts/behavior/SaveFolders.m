@@ -1,11 +1,32 @@
 classdef SaveFolders
-    %SAVEFOLDERS Summary of this class goes here
-    %   Detailed explanation goes here
+    % SAVEFOLDERS - A static class for saving various types of data and figures.
+    %
+    % Description:
+    %   This class provides a set of static methods to handle the saving of
+    %   experiment data, plots, and CSV results. It ensures that the target
+    %   directories exist and handles different file formats.
     
     methods (Static)
-
         
         function saveCsvResults(stStatistics, emStatistics, ps, exp, seq, boundary)
+            % saveCsvResults - Appends a single row of analysis results to a CSV file.
+            %
+            % Syntax:
+            %   saveCsvResults(stStatistics, emStatistics, ps, exp, seq, boundary)
+            %
+            % Description:
+            %   This method aggregates statistics for a single experiment and appends
+            %   them as a new row to a CSV file. If the file does not exist, it
+            %   creates it and adds a header row.
+            %
+            % Inputs:
+            %   stStatistics   - Struct array of stranger trial statistics.
+            %   emStatistics   - Struct array of empty trial statistics.
+            %   ps             - The preference score for the trial.
+            %   exp            - An `ExperimentBehave` object.
+            %   seq            - The sequence time in seconds.
+            %   boundary       - The boundary allowance in cm.
+            
             % Extract identifiers
             group  = exp.group;
             color  = exp.color;
@@ -41,19 +62,26 @@ classdef SaveFolders
                 writecell(row, fileName, 'WriteMode','append');
             end
         end
-
-
-
+        
         function saveFile(data, figHandle, baseDir, fileName, formats, printFlag)
-            % saveFile - Flexible file saver
+            % saveFile - A flexible utility for saving various file types.
+            %
+            % Syntax:
+            %   saveFile(data, figHandle, baseDir, fileName, formats, printFlag)
+            %
+            % Description:
+            %   This method saves data or a figure to a specified directory
+            %   in one or more formats. It supports PNG, FIG, MAT, and CSV.
+            %   The function checks if the directory exists and creates it
+            %   if necessary.
             %
             % Inputs:
-            %   data      - struct of variables to save (only used if 'mat' in formats)
-            %   figHandle - handle to figure (only used if 'png' or 'fig' in formats)
-            %   baseDir   - directory where files will be saved
-            %   fileName  - file name without extension
-            %   formats   - cell array of formats to save, e.g. {'png','fig','mat'}
-            %   printFlag - if true - print path to what saved
+            %   data      - Data to save (struct, cell, or table). Required for 'mat' and 'csv'.
+            %   figHandle - Handle to the figure to save. Required for 'png' and 'fig'.
+            %   baseDir   - The base directory path.
+            %   fileName  - The name of the file (without extension).
+            %   formats   - A cell array of file extensions to save (e.g., {'png','mat'}).
+            %   printFlag - A logical flag to print the save path to the console.
             % Examples:
             %   saveFile([], gcf, "results", "test_plot", {'png','fig'});
             %   saveFile(myStruct, [], "results", "trial_data", {'mat'});
@@ -97,7 +125,6 @@ classdef SaveFolders
                             tmp.(varName) = data;
                             save(fpath, '-struct', 'tmp');
                         end
-
                         
                     case 'csv'
                         if isempty(data), error('Data cell/struct required for CSV'); end
@@ -117,11 +144,5 @@ classdef SaveFolders
                 end
             end
         end
-
-
-
-
-
     end
-
 end
