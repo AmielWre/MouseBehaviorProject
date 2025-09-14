@@ -1,6 +1,7 @@
 # Ignore system files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Ignore MATLAB autosave and backup files
 *.asv
