@@ -123,6 +123,14 @@ for g = 1:numel(groupFolders)
             fprintf('Skipping %s (no XY_behave)\n', expPath);
             continue
         end
+
+        % Plot track and boundaries. comment if you don't wan't or have it
+        % already. save to:
+        % I:\year c project\results\3chamber\boundary&sequence\
+        % mouse track and cage\<mouse_id>.png (and .fig)
+        % plot_track_and_boundary(exp);
+        % close all;
+        % continue;
         
         % Create a unique identifier for this experiment to use as a field name
         % in the allPsMatrices structure
