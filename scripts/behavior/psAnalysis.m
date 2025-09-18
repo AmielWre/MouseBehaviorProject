@@ -75,7 +75,7 @@ modePerMouse = "normalize";
 baseDir = fullfile("results", "3chamber", "boundary&sequence");
 
 % -------- Collect matrices --------
-path = "results\\3chamber\\boundary&sequence\\allPsMatrices.mat";
+path = "results\3chamber\boundary&sequence\allPsMatrices.mat";
 load(path, 'allPsMatrices');
 
 % -------- Collect all fields --------
