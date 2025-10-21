@@ -45,7 +45,7 @@ function [X, y] = buildDataset(boundary, seqTime, normalizeMode)
         % Get experiment ID from filename (to match CA file)
         [~, name, ~] = fileparts(boolFiles(f).name);
         [group, color, date] = extractExpID(name); % helper to strip "_stranger"
-        fprintf("Processing %s %s %s", group, color, date);
+        fprintf("\nProcessing %s %s %s", group, color, date);
         
         % Load bool
         boolData = load(fullfile(baseDirBool, boolFiles(f).name));
@@ -71,6 +71,18 @@ function [X, y] = buildDataset(boundary, seqTime, normalizeMode)
 
         caData = load(caFile);
         caMat  = caData.ROICaData_stim;      % 48 × T × F
+
+        % --- Check dimension consistency ---
+        [nNeurons, T_ca, F_ca] = size(caMat);
+        [T_bool, F_bool] = size(boolMat);
+        
+        if T_ca ~= T_bool || F_ca ~= F_bool
+            warning("Dimension mismatch for %s %s %s:\n  CA matrix:  " + ...
+                "[%d × %d (Trials) × %d (Frames)]\n  Bool matrix: [%d (Trials) × %d (Frames)]\n  " + ...
+                "--> Skipping this experiment.\n", ...
+                    group, color, date, nNeurons, T_ca, F_ca, T_bool, F_bool);
+            continue;
+        end
         
         % --- Convert to frame-level dataset ---
         [X_exp, y_exp] = alignFrames(caMat, boolMat, normalizeMode);
@@ -112,14 +124,17 @@ function [X_exp, y_exp] = alignFrames(caMat, boolMat, normalizeMode)
 
     [nNeurons, T, F] = size(caMat);
 
-    % Reshape CA: 48 × T × F → (T*F) × 48
-    X_exp = permute(caMat, [2 3 1]);     % T × F × 48
-    X_exp = reshape(X_exp, T*F, nNeurons);
-    X_exp = X_exp(21:end, :);  % until frame 21 it's Nan. change if needed
+    % Reshape CA: we want frames to go first within each trial
+    X_exp = permute(caMat, [3 2 1]);      % F × T × 48
+    X_exp = reshape(X_exp, F*T, nNeurons);
 
-    % Reshape bool: T × F → (T*F) × 1
-    y_exp = reshape(boolMat, T*F, 1);
-    y_exp = y_exp(21:end);  % until frame 21 it's Nan. change if needed
+    % Reshape bool the same way
+    y_exp = permute(boolMat, [2 1]);      % F × T
+    y_exp = reshape(y_exp, F*T, 1);
+
+    % Remove first 21 frames (if needed)
+    X_exp = X_exp(21:end, :);
+    y_exp = y_exp(21:end);
 
     % Apply normalization if requested
     switch normalizeMode
