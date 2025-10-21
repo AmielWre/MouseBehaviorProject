@@ -14,48 +14,58 @@
 %   This script is intentionally lightweight and modular.
 
 clc; clear; close all;
-
-%% --- Parameters ---
-boundaries   = [2, 3, 4];         % candidate boundaries (example)
-seqTimes     = [1, 2, 3];         % candidate sequence durations
+    
+% --- Parameters ---
+boundaries = 0 : 0.5 : 5;         % candidate boundaries (example)
+seqTimes = 0 : 0.5 : 5;         % candidate sequence durations
 modelTypes   = {'logistic','svm'}; % models to train
 splitMethod  = 'holdout';         % 'cv' or 'holdout'
 saveResults  = true;
+psAveragePath = fullfile("results", "3chamber", "boundary&sequence", ...
+    "all_groups", "average.mat");
+topN = 20; % number of top pairs to analyze
+normalizeMode = "raw";  % "raw" : leave the ca data as is
+                        % "epoch" : normalize per social interaction epoch
 
-%% --- Storage for results ---
+% --- Storage for results ---
 results = struct();
 resultID = 1;
 
-%% --- Loop over boundary × seq pairs ---
-for b = boundaries
-    for s = seqTimes
-        fprintf('Processing boundary=%.1f, seq=%.1f ...\n', b, s);
+topPairs = choosePairs(psAveragePath, seqTimes, boundaries, topN);
+% --- Loop over boundary × seq for topPairs ---
+for i = 1:height(topPairs)
+    s = topPairs.SeqTime(i);
+    b = topPairs.Boundary(i);
+    psScore = topPairs.PS(i);
 
-        % 1. Build dataset
-        [X, y] = buildDataset(b, s); % <- placeholder (to implement)
+    fprintf('Processing pair %2d: Seq=%.1f, Boundary=%.1f, PS=%.3f\n', ...
+            i, s, b, psScore);
 
-        % 2. Loop over models
-        for m = 1:numel(modelTypes)
-            modelType = modelTypes{m};
+    % 1. Build dataset
+    % ------------------ got to here 18.9.25 ------------
+    [X, y] = buildDataset(b, s, normalizeMode); % <- placeholder (to implement)
 
-            % Train model
-            mdl = ModelTrainer.trainModel(X, y, modelType, struct());
+    % 2. Loop over models
+    for m = 1:numel(modelTypes)
+        modelType = modelTypes{m};
 
-            % Evaluate
-            metrics = evaluateModel(mdl, X, y, splitMethod);
+        % Train model
+        mdl = ModelTrainer.trainModel(X, y, modelType, struct());
 
-            % Store results
-            results(resultID).boundary = b;
-            results(resultID).seqTime  = s;
-            results(resultID).model    = modelType;
-            results(resultID).metrics  = metrics;
+        % Evaluate
+        metrics = evaluateModel(mdl, X, y, splitMethod);
 
-            resultID = resultID + 1;
-        end
+        % Store results
+        results(resultID).boundary = b;
+        results(resultID).seqTime  = s;
+        results(resultID).model    = modelType;
+        results(resultID).metrics  = metrics;
+
+        resultID = resultID + 1;
     end
 end
 
-%% --- Save results ---
+% --- Save results ---
 if saveResults
     outDir = fullfile("results","neuronal","modeling");
     if ~exist(outDir,"dir"), mkdir(outDir); end
@@ -63,3 +73,35 @@ if saveResults
 end
 
 fprintf('All experiments complete. Results saved.\n');
+
+% ---- Helpers ----
+function topPairs = choosePairs(psAveragePath, seqTimes, boundaries, topN)
+    % --- Load preference score data ---
+    load(psAveragePath, "allNormMatrix");
+    
+    % --- Rank the pairs by score ---
+    vals = allNormMatrix(:);
+    [sortedVals, idx] = sort(vals, 'descend', 'MissingPlacement', 'last');
+    
+    % Take top N values
+    topVals = sortedVals(1:topN);
+    topIdx  = idx(1:topN);
+    
+    % Convert linear indices to matrix coordinates
+    [numSeq, numBound] = size(allNormMatrix);
+    [rowIdx, colIdx] = ind2sub([numSeq, numBound], topIdx);
+    
+    % Store in a table for readability
+    topPairs = table(topVals, ...
+                     seqTimes(rowIdx)', ...
+                     boundaries(colIdx)', ...
+                     'VariableNames', {'PS', 'SeqTime', 'Boundary'});
+    
+    disp('Top pairs (ranked by PS score):');
+    disp(topPairs);
+    
+    % Save ranking (both .mat and .csv for convenience)
+    outDir = fullfile("results", "3chamber", "boundary&sequence", "summary_ps");
+    SaveFolders.saveFile(topPairs, [], outDir, sprintf("top%d_pairs", topN), {'mat','csv'}, true);
+
+end

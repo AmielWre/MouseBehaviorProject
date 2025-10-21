@@ -62,21 +62,25 @@ clc, clear, close all;
 boundaries = 0 : 0.5 : 5;     % Boundary allowances in cm
 seqTimes = 0 : 0.5 : 5;       % Sequence times in seconds (minimum stay in ROI)
 
+% % If you want to do all the code just for a specific experiment, apply the
+% % next paragraph (and only that!)
 % % Load cage position struct
-% cageStruct = load("chamber_rois_positions/10th_yellow_20240321.mat");
-%
+% cageStruct = load("chamber_rois_positions/10th_blue_20240512.mat");
 % % Create ExperimentBehave object for analysis
-% exp = ExperimentBehave("XY_behave_10th_yellow_20240321_em_R_st_L_3chamber.mat", cageStruct);
-% allPsMatrices - dynamic structure
-% This structure will store the preference score matrix for each experiment.
-allPsPath = fullfile("results", "3chamber", "boundary&sequence", "allPsMatrices_checkpoint.mat");
+% exp = ExperimentBehave("XY_behave_10th_blue_20240512_st_R_em_L_3chamber.mat", cageStruct);
+% psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries);
 
-% Check if a checkpoint file exists to resume analysis
-if isfile(allPsPath)
-    load(allPsPath, 'allPsMatrices');
-else
-    allPsMatrices = struct();
-end
+
+% % allPsMatrices - dynamic structure
+% % This structure will store the preference score matrix for each experiment.
+% allPsPath = fullfile("results", "3chamber", "boundary&sequence", "allPsMatrices_checkpoint.mat");
+% 
+% % Check if a checkpoint file exists to resume analysis
+% if isfile(allPsPath)
+%     load(allPsPath, 'allPsMatrices');
+% else
+%     allPsMatrices = struct();
+% end
 
 % Define paths to data and ROI directories
 processedDir = fullfile("data","processed");
@@ -119,6 +123,13 @@ for g = 1:numel(groupFolders)
         fprintf("\nProcessing: %s\n", expPath);
         % Create an ExperimentBehave object for the current experiment file
         exp = ExperimentBehave(expFile, cageStruct);
+        
+        % To check how mant trials:
+        % s = sprintf('%d, ', exp.stim_trials);
+        % s = s(1:end-2);  % remove trailing comma and space
+        % fprintf('stim_trials: [%s]\n', s);
+        % continue
+
         if isnan(exp.XY_behave)
             fprintf('Skipping %s (no XY_behave)\n', expPath);
             continue
