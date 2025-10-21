@@ -132,9 +132,13 @@ function [X_exp, y_exp] = alignFrames(caMat, boolMat, normalizeMode)
     y_exp = permute(boolMat, [2 1]);      % F × T
     y_exp = reshape(y_exp, F*T, 1);
 
-    % Remove first 21 frames (if needed)
-    X_exp = X_exp(21:end, :);
-    y_exp = y_exp(21:end);
+    % --- Create mask: 1 if the row has at least one non-NaN value
+    % ---              0 if all values are NaN
+    mask = ~all(isnan(X_exp), 2);
+
+    % --- Apply mask to both X_exp and y_exp
+    X_exp = X_exp(mask, :);
+    y_exp = y_exp(mask, :);
 
     % Apply normalization if requested
     switch normalizeMode
