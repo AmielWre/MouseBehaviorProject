@@ -24,6 +24,8 @@ saveResults  = true;
 psAveragePath = fullfile("results", "3chamber", "boundary&sequence", ...
     "all_groups", "average.mat");
 topN = 20; % number of top pairs to analyze
+normalizeMode = "raw";  % "raw" : leave the ca data as is
+                        % "epoch" : normalize per social interaction epoch
 
 % --- Storage for results ---
 results = struct();
@@ -40,7 +42,8 @@ for i = 1:height(topPairs)
             i, s, b, psScore);
 
     % 1. Build dataset
-    [X, y] = buildDataset(b, s); % <- placeholder (to implement)
+    % ------------------ got to here 18.9.25 ------------
+    [X, y] = buildDataset(b, s, normalizeMode); % <- placeholder (to implement)
 
     % 2. Loop over models
     for m = 1:numel(modelTypes)
@@ -100,6 +103,6 @@ function topPairs = choosePairs(psAveragePath, seqTimes, boundaries, topN)
     
     % Save ranking (both .mat and .csv for convenience)
     outDir = fullfile("results", "3chamber", "boundary&sequence", "summary_ps");
-    SaveFolders.saveFile(topPairs, [], outDir, "top20_pairs", {'mat','csv'}, true);
+    SaveFolders.saveFile(topPairs, [], outDir, sprintf("top%d_pairs", topN), {'mat','csv'}, true);
 
 end

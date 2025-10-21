@@ -268,6 +268,12 @@ function saveBollMats(analysis, exp)
     emMat = analysis.getMatrix("empty_out");
     stMat = squeeze(stMat(2, :, :)); % So it will contain only the mat with continuity (according to seqTimeInSec)
     emMat = squeeze(emMat(2, :, :)); % -- " --
+    if isvector(stMat)  % If only one trail was, it will become a vector
+        stMat = stMat(:)';  % ensure it’s a row
+    end
+    if isvector(emMat)  % Same to empty
+        emMat = emMat(:)';  % ensure it’s a row
+    end
     
     % Build folder path
     seqFolder = sprintf("seq%.1f", analysis.seqTimeInSec);
