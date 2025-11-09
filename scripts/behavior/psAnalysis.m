@@ -152,8 +152,8 @@ for m = 1:numel(mouseIDs)
     SaveFolders.saveFile([], fig, fullfile(baseDir, group, color), 'all_days', ...
         {'png', 'fig'}, false);
     % save in baseDir\summary_ps\all_days as <group>_<color>_all_days
-    SaveFolders.saveFile([], fig, fullfile(baseDir, "summary_ps", "all_days"),...
-        sprintf('%s_%s_all_days', group, color), {'png', 'fig'}, false);
+    SaveFolders.saveFile([], fig, fullfile(baseDir, "summary_ps", 'graphs', "all_days"),...
+        sprintf('summary_ps_%s_%s_all_days', group, color), {'png', 'fig'}, false);
 
     % -------- Save separate average-only figure (png and fig) --------
     figAvg = createAverageFigure(boundaries, seqTimes, avgMatrix, nSessions, group, color, threshold);
@@ -161,8 +161,8 @@ for m = 1:numel(mouseIDs)
     SaveFolders.saveFile([], figAvg, fullfile(baseDir, group, color), 'average', ...
         {'png', 'fig'}, false);
     % save in baseDir\summary_ps\per_mouse as average
-    SaveFolders.saveFile([], figAvg, fullfile(baseDir, "summary_ps",...
-        "per_mouse", "average"), sprintf('%s_%s', group, color), {'png', 'fig'}, false);
+    SaveFolders.saveFile([], figAvg, fullfile(baseDir, "summary_ps", 'graphs', ...
+        "per_mouse"), sprintf('average_ps_%s_%s', group, color), {'png', 'fig'}, false);
 
     % -------- Collect matrices for overall analysis --------
     avgNormMatrix = preprocessMatrix(rawMatrix, threshold, modePerMouse);
@@ -174,7 +174,7 @@ allNormMatrix = aggregateMatrices(allMatrices);
 figAll = createAverageFigure(boundaries, seqTimes, allNormMatrix, numel(allMatrices), 'All', 'Experiments', threshold);
 
 % Save overall average in baseDir\all_groups as average
-SaveFolders.saveFile([], figAll, fullfile(baseDir, 'all_groups'), 'average', ...
+SaveFolders.saveFile([], figAll, fullfile(baseDir, 'summary_ps', 'graphs', 'all_groups_average'), 'average', ...
         {'png', 'fig'}, false);
 
 % -------- Helper functions --------
@@ -195,26 +195,28 @@ function psMatrix = preprocessMatrix(rawMatrix, threshold, mode)
     % Mask extreme values
     mask = (rawMatrix >= (1 - threshold)) | (rawMatrix <= (-1 + threshold));
     psMatrix = rawMatrix;
-    psMatrix(mask) = 0;
+    psMatrix(mask) = NaN;
     switch mode
         case 'normalize'
-            % Scale matrix to [-1, 1] based on min/max (if not constant)
-            minVal = min(psMatrix(:));
-            maxVal = max(psMatrix(:));
+            minVal = min(psMatrix(:), [], 'omitnan');
+            maxVal = max(psMatrix(:), [], 'omitnan');
             if maxVal > minVal
                 psMatrix = 2 * ((psMatrix - minVal) / (maxVal - minVal)) - 1;
             end
         case 'zscore'
-            % Apply z-scoring (if not constant)
-            mu = mean(psMatrix(:));
-            sigma = std(psMatrix(:));
+            mu = mean(psMatrix(:), 'omitnan');
+            sigma = std(psMatrix(:), 'omitnan');
             if sigma > 0
                 psMatrix = (psMatrix - mu) / sigma;
             end
         case 'none'
             % Leave unchanged
+    
     end
+    % Finally, set masked values to 0 so they won’t contribute to sums
+    psMatrix(mask) = 0;
 end
+
 function aggMatrix = aggregateMatrices(matrixList)
     % aggregateMatrices - Aggregates a list of matrices flexibly
     %   matrixList: cell array of matrices to aggregate

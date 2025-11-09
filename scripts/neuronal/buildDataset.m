@@ -22,6 +22,9 @@ function [X, y] = buildDataset(boundary, seqTime, normalizeMode)
 %       - Currently only 'raw' is implemented; 'epoch' is left as future option
 
     % --- Locate folders ---
+    % data/processed/bool_matrices - the folder where all bool matrices for
+    % 3chamber social. .../seqZ/bW - matrices for sequence Z and boundary W
+    cfg = config();
     baseDirBool = fullfile("data", "processed", "bool_matrices", ...
                            sprintf("seq%.1f", seqTime), ...
                            sprintf("b%.1f", boundary));
@@ -44,7 +47,9 @@ function [X, y] = buildDataset(boundary, seqTime, normalizeMode)
     for f = 1:numel(boolFiles)
         % Get experiment ID from filename (to match CA file)
         [~, name, ~] = fileparts(boolFiles(f).name);
-        [group, color, date] = extractExpID(name); % helper to strip "_stranger"
+        % name should be in the format of 'bool_<group>_<color>_<date>_stranger'
+        % e.g 'bool_10th_blue_20240321_stranger'
+        [group, color, date] = extractExpID(name); % helper to strip
         fprintf("\nProcessing %s %s %s", group, color, date);
         
         % Load bool
@@ -57,7 +62,8 @@ function [X, y] = buildDataset(boundary, seqTime, normalizeMode)
         caDir = fullfile("data", "processed", group, "ca_matrix");
 
         % Build search pattern with wildcards
-        pattern = sprintf("Ca_trials_Matrix_%s_%s_*_%s_*.mat", group, date, color);
+        pattern = sprintf("Ca_trials_Matrix_%s_%s_%s_*_%s_*.mat", group, ...
+            date, cfg.EXPERIMENT_TYPE, color);
         
         % Find matching file(s)
         caFiles = dir(fullfile(caDir, pattern));
