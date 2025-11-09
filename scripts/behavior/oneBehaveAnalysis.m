@@ -11,6 +11,12 @@ function psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries)
     %   combination, saves intermediate and final results, and generates
     %   stacked bar plots and a preference score heatmap.
     %
+    % Calculate PS - Preference Score, (a-b)/(a+b)
+    %        where a=strangerTime, b=emptyTime.
+    %        Returns NaN if a+b=0.
+    % If you want to change this logic - just change computePreferenceScore
+    % function.
+    %
     % Inputs:
     %   exp       - An ExperimentBehave object containing the experiment's data.
     %   seqTimes  - Array of minimum stay times in ROI (numeric vector).
