@@ -165,7 +165,7 @@ for m = 1:numel(mouseIDs)
         "per_mouse"), sprintf('average_ps_%s_%s', group, color), {'png', 'fig'}, false);
 
     % -------- Collect matrices for overall analysis --------
-    avgNormMatrix = preprocessMatrix(rawMatrix, threshold, modePerMouse);
+    avgNormMatrix = preprocessMatrix(avgMatrix, threshold, modePerMouse);
     allMatrices{end+1} = avgNormMatrix;
 end
 
