@@ -278,6 +278,7 @@ function mouseID = extractMouseID(fieldName)
     %
     % How to Use:
     %   id = extractMouseID('x8th_blue_20231112');
+    %   -> id = x8th_blue
     % -------------------------------------------------------------------------
     parts = split(fieldName, '_');
     mouseID = strjoin(parts(1:2), '_');
