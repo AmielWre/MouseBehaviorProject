@@ -8,10 +8,11 @@
 % -------------------------------------------------------------
 
 clc; clear;
+warning('off','MATLAB:table:ModifiedAndSavedVarnames');
 
 %% === Constants ===
 BASE_DIR = 'results/3chamber/boundary&sequence/ml_models';
-MODEL_NAMES = {'SVM'};        % add more models later (e.g. 'KNN', 'Tree', 'Ensemble')
+MODEL_NAMES = {'SVM', 'KNN', 'RandomForest', 'Logistic'};   % Extend as needed
 MIN_TEST_EPOCHS = 5;
 EXCLUDE_NAN = true;
 COLOR_LIMITS = [0.4 0.9];
@@ -25,12 +26,36 @@ for m = 1:numel(MODEL_NAMES)
     modelName = MODEL_NAMES{m};
     modelPath = fullfile(BASE_DIR, modelName);
 
+    if ~exist(modelPath, 'dir')
+        fprintf('Model folder not found: %s\n', modelPath);
+        continue;
+    end
+
     fprintf('\n=== Processing model: %s ===\n', modelName);
+
+
+    % === Process only the "all_mice" folder === comment those lines if you
+    % want to analyze each mouse
+    mousePath = fullfile(modelPath, 'all_mice');
+    
+    if ~exist(mousePath, 'dir')
+        fprintf('  (No all_mice folder found in %s)\n', modelName);
+        continue;
+    end
+    
+    fprintf('  → Processing all_mice folder\n');
+    mouseName = 'all_mice';
+    analyzeMLPerformance(mousePath, MIN_TEST_EPOCHS, EXCLUDE_NAN, COLOR_LIMITS);
+    continue;
+
 
     % Get all mouse directories (ignore hidden/system)
     mouseDirs = dir(modelPath);
     mouseDirs = mouseDirs([mouseDirs.isdir]);
-    mouseDirs = mouseDirs(~ismember({mouseDirs.name}, {'.','..','summary_overall','summary_overall_average'}));
+
+    % Ignore unwanted folders
+    ignoreDirs = {'summary_overall','summary_overall_average','all_mice','summary_old','.','..'};
+    mouseDirs = mouseDirs(~ismember({mouseDirs.name}, ignoreDirs));
 
     %% Loop over each mouse
     for k = 1:numel(mouseDirs)
@@ -48,7 +73,7 @@ for m = 1:numel(MODEL_NAMES)
                 continue;
             end
 
-            % Store in structure
+            % Store results
             resultCount = resultCount + 1;
             AllResults(resultCount).Model = modelName;
             AllResults(resultCount).Mouse = mouseName;
@@ -64,8 +89,18 @@ end
 allTables = [];
 for i = 1:numel(AllResults)
     T = AllResults(i).Table;
+
+    % Normalize RemovedRegions type before concatenation
+    if ismember('RemovedRegions', T.Properties.VariableNames)
+        if ~iscell(T.RemovedRegions)
+            T.RemovedRegions = cellstr(string(T.RemovedRegions));
+        end
+    end
+
+    % Add model and mouse identifiers
     T.Model = repmat(string(AllResults(i).Model), height(T), 1);
     T.Mouse = repmat(string(AllResults(i).Mouse), height(T), 1);
+
     allTables = [allTables; T];
 end
 
@@ -76,7 +111,9 @@ if ~exist(summaryDir, 'dir')
 end
 
 save(fullfile(summaryDir, 'AllResults_struct.mat'), 'AllResults');
-writetable(allTables, fullfile(summaryDir, 'AllResults_table.xlsx'));
+if ~isempty(allTables)
+    writetable(allTables, fullfile(summaryDir, 'AllResults_table.xlsx'));
+end
 
 fprintf('\n=== Completed all models. ===\n');
 fprintf('Total mice processed: %d\n', numel(AllResults));

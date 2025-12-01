@@ -29,23 +29,36 @@ fprintf('Processing %s\n', fpath);
 
 % Extract mouse and model names from file name
 [~, fname, ~] = fileparts(fpath);
-parts = split(fname, '_');  % performance_<mouse_id>_<model_name>
-if numel(parts) < 3
+parts = split(fname, '_');  % e.g. performance_all_mice_kNN
+
+if numel(parts) == 4
+    % Normal case: performance_<mouse_id>_<color>_<model>
+    mouse_id = strjoin(parts(2:3), '_');
+    modelName = parts{4};
+elseif numel(parts) == 3
+    % All-mice case: performance_all_mice_<model>
+    mouse_id = strjoin(parts(2:3), '_');
+    modelName = parts{3};
+else
     warning('Unexpected filename format: %s', fname);
     T = table();
     return;
 end
-mouse_id  = parts{2};
-modelName = parts{3};
+
 
 %% Load the Excel data
 T = readtable(fpath, 'VariableNamingRule', 'preserve');
 
-% --- Ensure required columns exist ---
-reqCols = {'Seq', 'Boundary', 'Accuracy', 'AUC', 'TestEpochs'};
-if ~all(ismember(reqCols, T.Properties.VariableNames))
-    warning('File %s is missing one or more required columns.', fpath);
-    return;
+% Allow flexible column names
+colMap = containers.Map(...
+    {'Sequence','TestSamples','TestEpoch','Bound','TestEp'}, ...
+    {'Seq','TestEpochs','TestEpochs','Boundary','TestEpochs'});
+
+for k = keys(colMap)
+    key = k{1}; val = colMap(key);
+    if ismember(key, T.Properties.VariableNames)
+        T.Properties.VariableNames{strcmp(T.Properties.VariableNames,key)} = val;
+    end
 end
 
 %% --- Apply filters ---
@@ -87,7 +100,7 @@ imagesc(bVals, seqVals, Z_acc);
 set(gca, 'YDir', 'normal');
 xlabel('Boundary');
 ylabel('Sequence Time');
-title(sprintf('Accuracy Heatmap. in white - n_epochs\n%s - %s', modelName, mouse_id), 'Interpreter', 'none');
+title(sprintf('Accuracy Heatmap. in white - n_epochs tested\n%s - %s', modelName, mouse_id), 'Interpreter', 'none');
 colormap(jet);
 colorbar;
 caxis(COLOR_LIMITS);

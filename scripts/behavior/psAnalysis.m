@@ -93,8 +93,11 @@ modePerExp   = "normalize";        % 'none', 'normalize', or 'zscore'
 modePerMouse = "normalize";
 
 % Fixed color range for average heatmaps (symmetric around zero)
-USE_CLIM = true;          % true = use fixed range, false = auto
-CLIM_RANGE = [-0.7, 0.7]; % color scale limits
+USE_CLIM_AVERAGE = true;          % true = use fixed range, false = auto
+CLIM_RANGE_AVERAGE = [-0.7, 0.7]; % color scale limits
+
+USE_CLIM_SESSION = true;
+CLIM_RANGE_SESSION = [-0.7, 0.7];
 
 baseDir  = fullfile("results", "3chamber", "boundary&sequence");
 dataPath = fullfile(baseDir, "allPsMatrices.mat");
@@ -162,7 +165,7 @@ for m = 1:numel(mouseIDs)
 
         % Plot this session
         subplot(nRows, nCols, i);
-        plotHeatmap(boundaries, seqTimes, displayMatrix, sessionDate);
+        plotHeatmap(boundaries, seqTimes, displayMatrix, sessionDate, USE_CLIM_SESSION, CLIM_RANGE_SESSION);
     end
 
     % === Compute average ===
@@ -170,7 +173,7 @@ for m = 1:numel(mouseIDs)
     fprintf("For mouse: %s, %s — max PS: %.2f, min PS: %.2f, mean PS: %.2f\n", ...
     group, color, max(avgMatrix(:)), min(avgMatrix(:)), mean(avgMatrix(:), 'omitnan'));
     subplot(nRows, nCols, nSessions+1);
-    plotAverageHeatmap(boundaries, seqTimes, avgMatrix, nSessions, true, USE_CLIM, CLIM_RANGE);
+    plotAverageHeatmap(boundaries, seqTimes, avgMatrix, nSessions, true, USE_CLIM_AVERAGE, CLIM_RANGE_AVERAGE);
 
     sgtitle(sprintf('%s, %s - Outliers (|value| > %.1f) excluded', ...
         group, color, 1-threshold), 'FontSize', 10, 'Interpreter', 'none');
@@ -183,7 +186,7 @@ for m = 1:numel(mouseIDs)
 
     % === Save average-only figure ===
     figAvg = createAverageFigure(boundaries, seqTimes, avgMatrix, ...
-        nSessions, group, color, threshold, USE_CLIM, CLIM_RANGE);
+        nSessions, group, color, threshold, USE_CLIM_AVERAGE, CLIM_RANGE_AVERAGE);
     SaveFolders.saveFile([], figAvg, fullfile(baseDir, group, color), 'average', {'png','fig'}, false);
     SaveFolders.saveFile([], figAvg, fullfile(summaryDir, 'graphs', 'per_mouse'), ...
         sprintf('average_ps_%s_%s', group, color), {'png','fig'}, false);
@@ -209,7 +212,7 @@ end
 %% === Combine all mice ===
 allNormMatrix = aggregateMatrices(allMatrices);
 figAll = createAverageFigure(boundaries, seqTimes, allNormMatrix, ...
-    numel(allMatrices), 'All', 'Experiments', threshold, false, CLIM_RANGE);
+    numel(allMatrices), 'All', 'Experiments', threshold, false, CLIM_RANGE_AVERAGE);
 
 SaveFolders.saveFile([], figAll, fullfile(summaryDir, 'graphs', 'all_groups_average'), ...
     'average', {'png','fig'}, false);
@@ -232,10 +235,10 @@ fprintf(fid, 'psAnalysis.m run completed successfully\n');
 fprintf(fid, 'Date: %s\nThreshold: %.2f\n\n', datestr(now), threshold);
 
 % --- clim configuration ---
-USE_CLIM = true;       % <--- set this constant
-CLIM_RANGE = [-0.7, 0.7];  % <--- define your symmetric color limits
-if USE_CLIM
-    fprintf(fid, 'Color scaling (clim) applied to average heatmaps: [%0.2f, %0.2f]\n\n', CLIM_RANGE(1), CLIM_RANGE(2));
+USE_CLIM_AVERAGE = true;       % <--- set this constant
+CLIM_RANGE_AVERAGE = [-0.7, 0.7];  % <--- define your symmetric color limits
+if USE_CLIM_AVERAGE
+    fprintf(fid, 'Color scaling (clim) applied to average heatmaps: [%0.2f, %0.2f]\n\n', CLIM_RANGE_AVERAGE(1), CLIM_RANGE_AVERAGE(2));
 else
     fprintf(fid, 'Color scaling (clim) not applied (automatic scaling used)\n\n');
 end
@@ -347,7 +350,7 @@ function aggMatrix = aggregateMatrices(matrixList)
 end
 
 % -------------------------------------------------------------------------
-function plotHeatmap(boundaries, seqTimes, matrix, titleText)
+function plotHeatmap(boundaries, seqTimes, matrix, titleText, USE_CLIM, CLIM_RANGE)
     % plotHeatmap - Plots a single session PS heatmap.
     %
     % Args:
@@ -355,11 +358,16 @@ function plotHeatmap(boundaries, seqTimes, matrix, titleText)
     %   seqTimes (double): sequence times.
     %   matrix (double): PS matrix with NaNs for masked values.
     %   titleText (char): title string.
+    %   USE_CLIM (logical): true = fixed scale, false = auto.
+    %   CLIM_RANGE (1×2 double): color scale limits.
     %
     % How to Use:
     %   plotHeatmap(boundaries, seqTimes, matrix, '20231112');
     % -------------------------------------------------------------------------
     h = imagesc(boundaries, seqTimes, matrix);
+    if USE_CLIM
+        clim(CLIM_RANGE);
+    end
     colormap(jet); colorbar;
     xlabel('Boundary (cm)'); ylabel('Seq Time (s)');
     title(titleText, 'Interpreter','none','FontSize',8);
