@@ -1,4 +1,4 @@
-function trainGlobalModels(seqTime, boundary, mlModel)
+function trainGlobalModels(seqTime, boundary, mlModel, isControl)
 % trainGlobalModels - Train ML models using pooled (all-mice) data for one (seq,b) pair.
 %
 %   This function loads one dataset from:
@@ -8,10 +8,12 @@ function trainGlobalModels(seqTime, boundary, mlModel)
 %   It trains and evaluates a model (SVM, Logistic, RandomForest, kNN)
 %   using an 80/20 random split of all epochs across mice.
 %
+%   If isControl = true, labels are shuffled before training.
+%
 %   Results are saved under:
-%       results/3chamber/boundary&sequence/ml_models/<mlModel>/all_mice/
-%       ├── model_allmice_seq<seq>_b<boundary>.mat
-%       ├── performance_all_mice_<mlModel>.xlsx
+%       results/3chamber/boundary&sequence/ml_models/<mlModel>/all_mice/(control)/
+%       ├── model_allmice_seq<seq>_b<boundary>[_control].mat
+%       ├── performance_all_mice_<mlModel>[_control].xlsx
 %
 % Author: Amiel Wreschner
 % -------------------------------------------------------------------------
@@ -21,15 +23,34 @@ DATA_ROOT = fullfile('data','processed','neuronal_epoch_data_all');
 RESULTS_ROOT = fullfile('results','3chamber','boundary&sequence','ml_models');
 SPLIT_RATIO = 0.8; % 80% train / 20% test
 MIN_SAMPLES = 10;  % skip small datasets
-rng(1); % for reproducibility
+rng(2); % for reproducibility
+BALANCE_CLASSES = true;  % set to false if you want to keep raw proportions
+
 % -------------------------------------------------------------------------
 
-modelDir = fullfile(RESULTS_ROOT, mlModel, 'all_mice');
+%% === Control mode handling ===
+if nargin < 4
+    isControl = false;
+end
+
+if isControl
+    modeLabel = 'CONTROL';
+else
+    modeLabel = 'REAL';
+end
+
+subFolder = 'all_mice';
+if isControl
+    subFolder = fullfile(subFolder, 'control');
+end
+
+modelDir = fullfile(RESULTS_ROOT, mlModel, subFolder);
 if ~exist(modelDir, 'dir')
     mkdir(modelDir);
 end
 
-fprintf('\n=== Training global model (%s) for seq %.1f | b %.1f ===\n', mlModel, seqTime, boundary);
+fprintf('\n=== Training %s global model (%s) for seq %.1f | b %.1f ===\n', ...
+    mlModel, modeLabel, seqTime, boundary);
 
 %% === Load dataset ===
 dataFile = fullfile(DATA_ROOT, ...
@@ -37,23 +58,64 @@ dataFile = fullfile(DATA_ROOT, ...
     sprintf('neuronal_dataset_seq%.1f_b%.1f.mat', seqTime, boundary));
 
 if ~isfile(dataFile)
-    error('Dataset not found: %s', dataFile);
+    fprintf('  Dataset not found: %s\n', dataFile);
+    return;
 end
 
 S = load(dataFile);
 if ~isfield(S,'X') || ~isfield(S,'y')
-    error('Invalid dataset format (missing X or y).');
-end
-
-X = S.X;
-y = S.y;
-
-if size(X,1) < MIN_SAMPLES
-    fprintf('  Not enough samples (%d). Skipping.\n', size(X,1));
+    fprintf('  Invalid dataset format (missing X or y).\n');
     return;
 end
 
-%% === Train/test split ===
+% === Load full dataset ===
+X = S.X;
+y = S.y;
+
+% === Remove NaN columns and rows if necessary ===
+nanCols = all(isnan(X),1);
+if any(nanCols)
+    fprintf('  Removed %d all-NaN regions.\n', sum(nanCols));
+    X = X(:,~nanCols);
+end
+
+nanRows = any(isnan(X),2);
+if any(nanRows)
+    fprintf('  Removed %d rows with NaNs.\n', sum(nanRows));
+    X = X(~nanRows,:);
+    y = y(~nanRows);
+end
+
+%% === Control mode: shuffle labels ===
+if isControl
+    y = y(randperm(length(y)));
+end
+
+
+% === Balance classes before split ===
+if BALANCE_CLASSES
+    idx1 = find(y == 1);
+    idx0 = find(y == 0);
+
+    nMin = min(numel(idx1), numel(idx0));
+
+    idx1 = idx1(randperm(numel(idx1), nMin));
+    idx0 = idx0(randperm(numel(idx0), nMin));
+
+    balancedIdx = [idx1; idx0];
+    X = X(balancedIdx, :);
+    y = y(balancedIdx);
+
+    % Optional shuffle
+    shuff = randperm(numel(y));
+    X = X(shuff, :);
+    y = y(shuff);
+
+    fprintf('  → Balanced dataset: %d samples per class (total %d)\n', nMin, numel(y));
+    fprintf('  Stranger %% after balance: %.1f%%\n', 100 * mean(y));
+end
+
+% === Now do the train/test split ===
 n = size(X,1);
 idx = randperm(n);
 nTrain = floor(SPLIT_RATIO * n);
@@ -64,7 +126,14 @@ testIdx = idx(nTrain+1:end);
 X_train = X(trainIdx,:);
 y_train = y(trainIdx);
 X_test  = X(testIdx,:);
-y_test  = y(testIdx);
+y_test  = y(testIdx,:);
+
+
+if size(X,1) < MIN_SAMPLES
+    fprintf('  Not enough samples (%d). Skipping.\n', size(X,1));
+    return;
+end
+
 
 %% === Handle NaNs ===
 nanCols = all(isnan(X_train),1);
@@ -123,32 +192,19 @@ end
 fprintf('  Done. Accuracy %.2f | AUC %.2f | Train=%d | Test=%d\n', ...
     acc, AUC, numel(y_train), numel(y_test));
 
-%% === Save model ===
-modelFile = fullfile(modelDir, ...
-    sprintf('model_allmice_seq%.1f_b%.1f.mat', seqTime, boundary));
-save(modelFile, 'M', 'seqTime', 'boundary', 'acc', 'AUC', 'nTrain', 'n', 'mlModel');
-
 %% === Save / Update performance table ===
-perfFile = fullfile(modelDir, sprintf('performance_all_mice_%s.xlsx', mlModel));
+perfFile = fullfile(modelDir, ...
+    sprintf('performance_all_mice_%s%s.xlsx', mlModel, ternary(isControl,'_control','')));
+
+% Compute class balance (before split)
+strangerPct = mean(y == 1) * 100;
 
 newRow = table(string(mlModel), seqTime, boundary, acc, AUC, ...
-    numel(y_train), numel(y_test), ...
-    'VariableNames', {'Model','Seq','Boundary','Accuracy','AUC','TrainSamples','TestSamples'});
+    numel(y_train), numel(y_test), logical(isControl), strangerPct, ...
+    'VariableNames', {'Model','Seq','Boundary','Accuracy','AUC','TrainSamples','TestSamples','Control','StrangerPct'});
 
 if isfile(perfFile)
     T = readtable(perfFile);
-
-    % Align columns
-    missingInT = setdiff(newRow.Properties.VariableNames, T.Properties.VariableNames);
-    for v = missingInT
-        T.(v{1}) = repmat({''}, height(T), 1);
-    end
-    missingInRow = setdiff(T.Properties.VariableNames, newRow.Properties.VariableNames);
-    for v = missingInRow
-        newRow.(v{1}) = {''};
-    end
-    newRow = newRow(:, T.Properties.VariableNames);
-
     T = [T; newRow];
 else
     T = newRow;
@@ -157,5 +213,17 @@ end
 writetable(T, perfFile);
 fprintf('  Results saved to: %s\n', perfFile);
 
-fprintf('\n=== Completed global model for seq %.1f | b %.1f (%s) ===\n', seqTime, boundary, mlModel);
+
+fprintf('\n=== Completed %s global model for seq %.1f | b %.1f (%s) ===\n', ...
+    modeLabel, seqTime, boundary, mlModel);
+end
+
+%% === Helper function ===
+function out = ternary(cond, a, b)
+% Simple inline ternary operator
+if cond
+    out = a;
+else
+    out = b;
+end
 end

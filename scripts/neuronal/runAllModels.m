@@ -5,8 +5,9 @@ function runAllModels()
 
 boundaries = 0 : 0.5 : 5;        % candidate boundaries (cm)
 seqTimes   = 0 : 0.5 : 5;        % candidate sequence durations (s)
-mlModels = {'SVM', 'Logistic', 'RandomForest', 'kNN'};
-MODE  = 'per_mouse';    % 'per_mouse' or 'all_mice'
+mlModels = {'SVM'};  % {'SVM', 'Logistic', 'RandomForest', 'kNN'}
+MODE  = 'all_mice';    % 'per_mouse' or 'all_mice'
+isControl = true;  % if true - shufle the labels and make a control model. for now it is implemented in trainGlobalModels
 
 for m = 1:length(mlModels)
     mlModel = mlModels{m};
@@ -18,7 +19,7 @@ for m = 1:length(mlModels)
             if strcmpi(MODE, 'per_mouse')
                 trainMouseModels(seqTime, boundary, mlModel);
             elseif strcmpi(MODE, 'all_mice')
-                trainGlobalModels(seqTime, boundary, mlModel);
+                trainGlobalModels(seqTime, boundary, mlModel, isControl);
             end
         end
     end
