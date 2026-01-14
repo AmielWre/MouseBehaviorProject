@@ -62,13 +62,13 @@ clc, clear, close all;
 boundaries = 0 : 0.5 : 5;     % Boundary allowances in cm
 seqTimes = 0 : 0.5 : 5;       % Sequence times in seconds (minimum stay in ROI)
 
-% % If you want to do all the code just for a specific experiment, apply the
-% % next paragraph (and only that!)
-% % Load cage position struct
-% cageStruct = load("chamber_rois_positions/10th_blue_20240512.mat");
-% % Create ExperimentBehave object for analysis
-% exp = ExperimentBehave("XY_behave_10th_blue_20240512_st_R_em_L_3chamber.mat", cageStruct);
-% psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries);
+% If you want to do all the code just for a specific experiment, apply the
+% next paragraph (and only that!)
+% Load cage position struct
+cageStruct = load("chamber_rois_positions/8th_green_20231212.mat");
+% Create ExperimentBehave object for analysis
+exp = ExperimentBehave("XY_behave_8th_green_20231212_em_R_st_L_3chamber.mat", cageStruct);
+psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries);
 
 
 % % allPsMatrices - dynamic structure
@@ -135,13 +135,17 @@ for g = 1:numel(groupFolders)
             continue
         end
 
-        % Plot track and boundaries. comment if you don't wan't or have it
-        % already. save to:
-        % I:\year c project\results\3chamber\boundary&sequence\
-        % mouse track and cage\<mouse_id>.png (and .fig)
-        % plot_track_and_boundary(exp);
+        % % Plot track and boundaries. comment if you don't want or have it
+        % % already. save to:
+        % % I:\year c project\results\3chamber\boundary&sequence\
+        % % mouse track and cage\<mouse_id>.png (and .fig)
+        % plotTrackAndBoundarySimple(exp);
         % close all;
         % continue;
+
+        plotTrackAndBoundary(exp, seqTimes, boundaries);
+        close all;
+        continue;
         
         % Create a unique identifier for this experiment to use as a field name
         % in the allPsMatrices structure

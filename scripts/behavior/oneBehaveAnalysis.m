@@ -132,7 +132,7 @@ function psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries)
         fig = plotStackedBars(seqTimeInSec, boundaries, strangerData, emptyData);
         % Save plot in pathToFolder\<group>\<color>\<date>_<sequence>second_sequence.png
         fileName = sprintf('%s_%.1fsecond_sequence', date, seqTimeInSec);
-        SaveFolders.saveFile([], fig, baseDir, fileName, {'png'}, true);
+        SaveFolders.saveFile([], fig, baseDir, fileName, {'png', 'fig'}, true);
     end
     % Plot heatmap of PS scores
     fig = plotPreferenceHeatmap(seqTimes, boundaries, psMatrix, exp);

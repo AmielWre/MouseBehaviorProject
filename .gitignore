@@ -12,6 +12,7 @@ desktop.ini
 results/
 data/
 resources/
+scripts/temporary_code.m
 
 # Ignore project-specific temporary files
 *.prj

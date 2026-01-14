@@ -1,7 +1,7 @@
-function plot_track_and_boundary(exp)
-    % PLOT_TRACK_AND_BOUNDARY  Plot mouse trajectory with cage positions and boundary expansion
+function plotTrackAndBoundarySimple(exp)
+    % plotTrackAndBoundarySimple  Plot mouse trajectory with cage positions and boundary expansion
     %
-    %   plot_track_and_boundary(exp) visualizes the XY trajectory of a mouse
+    %   plotTrackAndBoundarySimple(exp) visualizes the XY trajectory of a mouse
     %   across all trials, overlays the positions of the stranger and empty cages,
     %   and expands the stranger cage by boundary allowances from 1 to 5 cm. 
     %   The function saves a high-resolution figure in PNG and FIG formats.
@@ -36,7 +36,7 @@ function plot_track_and_boundary(exp)
     %       [group]_[color]_[date].png / .fig
     %
     % EXAMPLE:
-    %   plot_track_and_boundary(exp);
+    %   plotTrackAndBoundarySimple(exp);
     %
     %   % Produces a figure with:
     %   %   - Mouse trajectory (black scatter)
