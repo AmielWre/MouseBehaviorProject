@@ -65,9 +65,10 @@ seqTimes = 0 : 0.5 : 5;       % Sequence times in seconds (minimum stay in ROI)
 % If you want to do all the code just for a specific experiment, apply the
 % next paragraph (and only that!)
 % Load cage position struct
-cageStruct = load("chamber_rois_positions/8th_green_20231212.mat");
+cageStruct = load("chamber_rois_positions/8th_blue_20231119.mat");
 % Create ExperimentBehave object for analysis
-exp = ExperimentBehave("XY_behave_8th_green_20231212_em_R_st_L_3chamber.mat", cageStruct);
+exp = ExperimentBehave("XY_behave_8th_blue_20231119_em_R_st_L_3chamber.mat", cageStruct);
+plotTrackAndBoundary(exp, seqTimes, boundaries);
 psMatrix = oneBehaveAnalysis(exp, seqTimes, boundaries);
 
 

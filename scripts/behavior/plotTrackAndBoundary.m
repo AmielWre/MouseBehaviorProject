@@ -26,6 +26,12 @@ function plotTrackAndBoundary(exp, seqTimes, boundaries)
 %         └── <group>_<color>_<date>_epochs/
 %                 ├── b<boundary>_seq<seq>.png
 %
+% NOTES ON RESOLUTION EXPORT:
+%   • Default resolution = 600 DPI (suitable for most uses)
+%   • For *publication-quality*, set `highRes = 1200` (or 2400 for max)
+%   • For *fast export*, set `highRes = 300`
+%   • You can also export vector-quality PDFs by enabling the PDF lines below.
+%
 % -------------------------------------------------------------------------
 
 %% === Setup ===
@@ -48,19 +54,38 @@ px2cm        = exp.cagePos.px2cm;
 
 fprintf('\n=== Generating trajectory plots for %s ===\n', id);
 
+%% === Resolution Setting ===
+% -------------------------------------------------------------------------
+% Recommended: change only this variable to control resolution.
+highRes = 1200;   % 1200 DPI = very high quality | 600 = standard | 300 = fast
+% -------------------------------------------------------------------------
+
 %% === 1. Base trajectory plot ===
 fig = figure('Visible','off');
+fig.Units = 'centimeters';  % optional - ensures consistent figure size
+fig.Position = [2 2 16 12]; % larger figure for cleaner export
+
 scatter(x_all, y_all, 1.5, 'k', 'filled'); % smaller dots
 axis equal tight;
 xlabel('X (px)', 'FontSize',8);
 ylabel('Y (px)', 'FontSize',8);
 title(sprintf('%s | Base Trajectory', id), 'Interpreter','none', 'FontSize',9);
 set(gca, 'FontSize',8);
-exportgraphics(fig, fullfile(outDir, sprintf('%s_base.png', id)), 'Resolution',600);
+
+% --- Export options ---
+% Standard raster export (PNG)
+exportgraphics(fig, fullfile(outDir, sprintf('%s_base.png', id)), 'Resolution', highRes);
+
+% Optional: vector-quality PDF export (excellent for reports)
+% exportgraphics(fig, fullfile(outDir, sprintf('%s_base.pdf', id)), 'ContentType','vector');
+
 close(fig);
 
 %% === 2. Cages + Boundaries plot ===
 fig = figure('Visible','off'); hold on;
+fig.Units = 'centimeters';
+fig.Position = [2 2 16 12];
+
 hTraj = scatter(x_all, y_all, 1.5, [0.1 0.1 0.1], 'filled');
 
 % Plot cages
@@ -90,16 +115,18 @@ title(sprintf('%s | Cages and Boundaries', id), ...
     'Interpreter','none','FontSize',9,'FontWeight','bold');
 set(gca, 'FontSize',8);
 
-% Create legend with note included
+% Create legend
 hStranger = plot(nan,nan,'-','Color',[0 0.8 0],'LineWidth',1.2);
 hEmpty = plot(nan,nan,'-','Color',[1 0 0],'LineWidth',1.2);
-hNote = plot(nan,nan,'w','LineStyle','none');  % invisible placeholder
+hNote = plot(nan,nan,'w','LineStyle','none');
 
 legend([hTraj hStranger hEmpty hNote], ...
     {'Trajectory','Stranger cage','Empty cage','Dashed lines = 1 cm'}, ...
     'Location','northeastoutside', 'FontSize',7, 'Box','off');
 
-exportgraphics(fig, fullfile(outDir, sprintf('%s_boundaries.png', id)), 'Resolution',600);
+% --- Export options ---
+exportgraphics(fig, fullfile(outDir, sprintf('%s_boundaries.png', id)), 'Resolution', highRes);
+% exportgraphics(fig, fullfile(outDir, sprintf('%s_boundaries.pdf', id)), 'ContentType','vector');
 close(fig);
 
 %% === 3. Epoch overlay plots ===
@@ -140,6 +167,9 @@ for bIdx = 1:numel(boundaries)
 
         % --- Plot epochs ---
         fig = figure('Visible','off'); hold on;
+        fig.Units = 'centimeters';
+        fig.Position = [2 2 16 12];
+
         scatter(x_all, y_all, 1, [0.85 0.85 0.85], 'filled'); % background
         scatter(x_all(boolS), y_all(boolS), 2, [0 0.8 0], 'filled', 'MarkerFaceAlpha', 0.8);
         scatter(x_all(boolE), y_all(boolE), 2, [1 0 0], 'filled', 'MarkerFaceAlpha', 0.8);
@@ -169,7 +199,7 @@ for bIdx = 1:numel(boundaries)
             'Interpreter','none','FontSize',9);
         set(gca, 'FontSize',8);
 
-        % Legend (compact)
+        % Legend
         hAll = plot(nan,nan,'o','MarkerFaceColor',[0.8 0.8 0.8],'MarkerEdgeColor','none');
         hStr = plot(nan,nan,'o','MarkerFaceColor',[0 0.8 0],'MarkerEdgeColor','none');
         hEmp = plot(nan,nan,'o','MarkerFaceColor',[1 0 0],'MarkerEdgeColor','none');
@@ -180,7 +210,11 @@ for bIdx = 1:numel(boundaries)
             'Location','northeastoutside','FontSize',7,'Box','off');
 
         outFile = fullfile(epochDir, sprintf('b%.1f_seq%.1f.png', b, seq));
-        exportgraphics(fig, outFile, 'Resolution', 600);
+
+        % --- Export options ---
+        exportgraphics(fig, outFile, 'Resolution', highRes);
+        % exportgraphics(fig, replace(outFile, ".png", ".pdf"), 'ContentType','vector');
+
         close(fig);
     end
 end
