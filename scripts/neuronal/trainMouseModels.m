@@ -129,23 +129,23 @@ for m = 1:length(mouseDirs)
                        'VariableNames', {'Mouse','Seq','Boundary','TrainEpochs','TestEpochs', ...
                                          'Control','EqualClassification','Accuracy','AUC','RemovedRegions'});
         % === Ensure same columns between existing and new row ===
-        missingInT = setdiff(newRow.Properties.VariableNames, T.Properties.VariableNames);
+        missingInT = setdiff(placeholderRow.Properties.VariableNames, T.Properties.VariableNames);
         for v = missingInT
             T.(v{1}) = repmat({''}, height(T), 1);
         end
         
-        missingInRow = setdiff(T.Properties.VariableNames, newRow.Properties.VariableNames);
+        missingInRow = setdiff(T.Properties.VariableNames, placeholderRow.Properties.VariableNames);
         for v = missingInRow
-            newRow.(v{1}) = {''};
+            placeholderRow.(v{1}) = {''};
         end
         
-        % Reorder columns to match
-        newRow = newRow(:, T.Properties.VariableNames);
+        % Reorder columns
+        placeholderRow = placeholderRow(:, T.Properties.VariableNames);
         
         T = [T; placeholderRow];
-        T = enforceColumnOrder(T);
-        safeWriteTable(T, perfFile);
+        writetable(T, perfFile);
         continue;
+
     end
 
     %% --- Fill NaNs per class

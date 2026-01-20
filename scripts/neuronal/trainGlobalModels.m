@@ -23,8 +23,9 @@ DATA_ROOT = fullfile('data','processed','neuronal_epoch_data_all');
 RESULTS_ROOT = fullfile('results','3chamber','boundary&sequence','ml_models');
 SPLIT_RATIO = 0.8; % 80% train / 20% test
 MIN_SAMPLES = 10;  % skip small datasets
-rng(2); % for reproducibility
-BALANCE_CLASSES = true;  % set to false if you want to keep raw proportions
+rng(2); % reproducibility
+BALANCE_CLASSES = true;
+DO_TUNE_SVM = true;  % enable CV optimization for SVM
 
 % -------------------------------------------------------------------------
 
@@ -68,11 +69,10 @@ if ~isfield(S,'X') || ~isfield(S,'y')
     return;
 end
 
-% === Load full dataset ===
 X = S.X;
 y = S.y;
 
-% === Remove NaN columns and rows if necessary ===
+%% === Remove NaN columns/rows ===
 nanCols = all(isnan(X),1);
 if any(nanCols)
     fprintf('  Removed %d all-NaN regions.\n', sum(nanCols));
@@ -89,24 +89,20 @@ end
 %% === Control mode: shuffle labels ===
 if isControl
     y = y(randperm(length(y)));
+    fprintf('  Control mode: shuffled labels.\n');
 end
 
-
-% === Balance classes before split ===
+%% === Balance classes before split ===
 if BALANCE_CLASSES
     idx1 = find(y == 1);
     idx0 = find(y == 0);
-
     nMin = min(numel(idx1), numel(idx0));
-
     idx1 = idx1(randperm(numel(idx1), nMin));
     idx0 = idx0(randperm(numel(idx0), nMin));
-
     balancedIdx = [idx1; idx0];
     X = X(balancedIdx, :);
     y = y(balancedIdx);
 
-    % Optional shuffle
     shuff = randperm(numel(y));
     X = X(shuff, :);
     y = y(shuff);
@@ -115,42 +111,56 @@ if BALANCE_CLASSES
     fprintf('  Stranger %% after balance: %.1f%%\n', 100 * mean(y));
 end
 
-% === Now do the train/test split ===
+%% === Skip small datasets early ===
+if size(X,1) < MIN_SAMPLES
+    fprintf('  Not enough samples (%d). Skipping.\n', size(X,1));
+
+    perfFile = fullfile(modelDir, ...
+        sprintf('performance_all_mice_%s%s.xlsx', mlModel, ternary(isControl,'_control','')));
+    if isfile(perfFile)
+        T = readtable(perfFile);
+    else
+        T = table;
+    end
+    placeholderRow = table(string(mlModel), seqTime, boundary, NaN, NaN, ...
+        0, 0, logical(isControl), NaN, ...
+        'VariableNames', {'Model','Seq','Boundary','Accuracy','AUC','TrainSamples','TestSamples','Control','StrangerPct'});
+    T = [T; placeholderRow];
+    T = enforceColumnOrder(T);
+    safeWriteTable(T, perfFile);
+    return;
+end
+
+%% === Train/test split ===
 n = size(X,1);
 idx = randperm(n);
 nTrain = floor(SPLIT_RATIO * n);
-
 trainIdx = idx(1:nTrain);
 testIdx = idx(nTrain+1:end);
-
 X_train = X(trainIdx,:);
 y_train = y(trainIdx);
 X_test  = X(testIdx,:);
 y_test  = y(testIdx,:);
 
-
-if size(X,1) < MIN_SAMPLES
-    fprintf('  Not enough samples (%d). Skipping.\n', size(X,1));
-    return;
-end
-
-
-%% === Handle NaNs ===
-nanCols = all(isnan(X_train),1);
-if any(nanCols)
-    fprintf('  Removed %d all-NaN regions.\n', sum(nanCols));
-    X_train = X_train(:,~nanCols);
-    X_test  = X_test(:,~nanCols);
-end
-
+%% === Fill NaNs ===
 X_train = fillmissing(X_train,'movmean',5);
 X_test  = fillmissing(X_test,'movmean',5);
 
 %% === Train model ===
 switch lower(mlModel)
     case 'svm'
-        fprintf('  Training SVM...\n');
-        M = fitcsvm(X_train, y_train, 'KernelFunction','linear','Standardize',true);
+        if DO_TUNE_SVM
+            fprintf('  Training SVM with 5-fold CV optimization...\n');
+            M = fitcsvm(X_train, y_train, ...
+                'KernelFunction','linear', ...
+                'Standardize',true, ...
+                'OptimizeHyperparameters','auto', ...
+                'HyperparameterOptimizationOptions', struct( ...
+                    'ShowPlots',false, 'Kfold',5, 'Verbose',0));
+        else
+            fprintf('  Training SVM...\n');
+            M = fitcsvm(X_train, y_train, 'KernelFunction','linear','Standardize',true);
+        end
 
     case 'logistic'
         fprintf('  Training Logistic Regression...\n');
@@ -182,7 +192,6 @@ switch lower(mlModel)
 end
 
 acc = mean(y_pred == y_test);
-
 try
     [~,~,~,AUC] = perfcurve(y_test, scores(:,2), 1);
 catch
@@ -192,11 +201,14 @@ end
 fprintf('  Done. Accuracy %.2f | AUC %.2f | Train=%d | Test=%d\n', ...
     acc, AUC, numel(y_train), numel(y_test));
 
-%% === Save / Update performance table ===
+%% === Save model ===
+modelFile = fullfile(modelDir, ...
+    sprintf('model_allmice_seq%.1f_b%.1f%s.mat', seqTime, boundary, ternary(isControl,'_control','')));
+save(modelFile, 'M', 'seqTime', 'boundary', 'acc', 'AUC', 'nTrain', 'n', 'mlModel');
+
+%% === Save performance ===
 perfFile = fullfile(modelDir, ...
     sprintf('performance_all_mice_%s%s.xlsx', mlModel, ternary(isControl,'_control','')));
-
-% Compute class balance (before split)
 strangerPct = mean(y == 1) * 100;
 
 newRow = table(string(mlModel), seqTime, boundary, acc, AUC, ...
@@ -210,20 +222,28 @@ else
     T = newRow;
 end
 
-writetable(T, perfFile);
+T = enforceColumnOrder(T);
+safeWriteTable(T, perfFile);
 fprintf('  Results saved to: %s\n', perfFile);
-
 
 fprintf('\n=== Completed %s global model for seq %.1f | b %.1f (%s) ===\n', ...
     modeLabel, seqTime, boundary, mlModel);
 end
 
-%% === Helper function ===
+%% === Helper functions ===
 function out = ternary(cond, a, b)
-% Simple inline ternary operator
-if cond
-    out = a;
-else
-    out = b;
+if cond, out = a; else, out = b; end
 end
+
+function safeWriteTable(T, perfFile)
+perfDir = fileparts(perfFile);
+if ~exist(perfDir, 'dir'), mkdir(perfDir); end
+writetable(T, perfFile);
+end
+
+function T = enforceColumnOrder(T)
+desiredOrder = {'Model','Seq','Boundary','Accuracy','AUC', ...
+                'TrainSamples','TestSamples','Control','StrangerPct'};
+existingCols = intersect(desiredOrder, T.Properties.VariableNames, 'stable');
+T = T(:, existingCols);
 end

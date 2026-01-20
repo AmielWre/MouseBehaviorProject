@@ -5,7 +5,7 @@ function runAllModels()
 
 boundaries = 0 : 0.5 : 5;        % candidate boundaries (cm)
 seqTimes   = 0 : 0.5 : 5;      % candidate sequence durations (s)
-MODE  = 'per_mouse';             % 'per_mouse' or 'all_mice'
+MODE  = 'all_mice';             % 'per_mouse' or 'all_mice'
 mlModels = {'SVM'};              % {'SVM', 'Logistic', 'RandomForest', 'kNN'}
 isControl = true;               % if true - shuffle labels
 isEqualClassification = true;
@@ -16,8 +16,11 @@ baseResults = fullfile('results','3chamber','boundary&sequence','ml_models');
 for m = 1:length(mlModels)
     mlModel = mlModels{m};
     modelDir = fullfile(baseResults, mlModel);
+    if strcmp(MODE, 'all_mice')
+        modelDir = fullfile(modelDir, 'all_mice');
+    end
     if isControl
-        modelDir = fullfile(baseResults, mlModel, 'control');
+        modelDir = fullfile(modelDir, 'control');
     end
     if ~exist(modelDir, 'dir'), mkdir(modelDir); end
 
