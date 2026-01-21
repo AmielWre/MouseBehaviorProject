@@ -13,6 +13,7 @@ results/
 data/
 resources/
 scripts/temporary_code.m
+scripts/combineFiguresToPDF.m
 
 # Ignore project-specific temporary files
 *.prj

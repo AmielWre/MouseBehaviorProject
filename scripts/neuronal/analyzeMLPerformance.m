@@ -31,20 +31,22 @@ fprintf('Processing %s\n', fpath);
 [~, fname, ~] = fileparts(fpath);
 parts = split(fname, '_');  % e.g. performance_all_mice_kNN
 
-if numel(parts) == 4
+if numel(parts) <= 5
     % Normal case: performance_<mouse_id>_<color>_<model>
-    mouse_id = strjoin(parts(2:3), '_');
-    modelName = parts{4};
-elseif numel(parts) == 3
-    % All-mice case: performance_all_mice_<model>
-    mouse_id = strjoin(parts(2:3), '_');
-    modelName = parts{3};
+    mouse_id = strjoin(parts(2:end-1), '_');
+    modelName = parts{end};
 else
     warning('Unexpected filename format: %s', fname);
     T = table();
     return;
 end
 
+%% === Resolution control ===
+if ismember(mouse_id, {'10th_yellow','all_mice', 'all_mice_control'})
+    exportRes = 1200;
+else
+    exportRes = 600;
+end
 
 %% Load the Excel data
 T = readtable(fpath, 'VariableNamingRule', 'preserve');
@@ -119,8 +121,9 @@ for i = 1:length(seqVals)
 end
 hold off;
 
+exportgraphics(fig1, fullfile(summaryDir, sprintf('acc_heatmap_%s_%s.png', modelName, mouse_id)), ...
+    'Resolution', exportRes);
 saveas(fig1, fullfile(summaryDir, sprintf('acc_heatmap_%s_%s.fig', modelName, mouse_id)));
-saveas(fig1, fullfile(summaryDir, sprintf('acc_heatmap_%s_%s.png', modelName, mouse_id)));
 close(fig1);
 
 %% --- AUC Heatmap ---
@@ -158,9 +161,10 @@ for i = 1:length(seqVals)
 end
 hold off;
 
+exportgraphics(fig2, fullfile(summaryDir, sprintf('auc_heatmap_%s_%s.png', modelName, mouse_id)), ...
+    'Resolution', exportRes);
 saveas(fig2, fullfile(summaryDir, sprintf('auc_heatmap_%s_%s.fig', modelName, mouse_id)));
-saveas(fig2, fullfile(summaryDir, sprintf('auc_heatmap_%s_%s.png', modelName, mouse_id)));
 close(fig2);
 
-fprintf('  → Saved heatmaps for %s (%s)\n', mouse_id, modelName);
+fprintf('  → Saved heatmaps for %s (%s) [Resolution: %d DPI]\n', mouse_id, modelName, exportRes);
 end
